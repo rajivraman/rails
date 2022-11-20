@@ -56,6 +56,30 @@ class ZeitwerkIntegrationTest < ActiveSupport::TestCase
     assert RESTfulController
   end
 
+  test "root directories manually set by the user are honored" do
+    app_dir "app/forms"
+    app_dir "app/services"
+
+    app_file "config/initializers/namespaces.rb", <<~'RUBY'
+      module ZeitwerkIntegrationTestForms; end
+      module ZeitwerkIntegrationTestServices; end
+
+      Rails.autoloaders.main.tap do |main|
+        # Argument is a Pathname object.
+        main.push_dir(Rails.root.join("app/forms"), namespace: ZeitwerkIntegrationTestForms)
+        # Argument is a string.
+        main.push_dir("#{Rails.root}/app/services", namespace: ZeitwerkIntegrationTestServices)
+      end
+    RUBY
+
+    app_file "app/forms/x.rb", "ZeitwerkIntegrationTestForms::X = true"
+    app_file "app/services/x.rb", "ZeitwerkIntegrationTestServices::X = true"
+
+    boot
+
+    assert ZeitwerkIntegrationTestForms::X
+    assert ZeitwerkIntegrationTestServices::X
+  end
 
   test "the once autoloader can autoload from initializers" do
     app_file "extras0/x.rb", "X = 0"
